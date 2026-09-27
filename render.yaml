@@ -1,0 +1,122 @@
+# Render Blueprint for running Postal.
+#
+# Deploy: Render Dashboard -> New -> Blueprint -> pick this repository.
+# See doc/render.md for the values you are prompted for and how to connect
+# your applications to the SMTP server afterwards.
+#
+# All services must stay in the same region so they share a private network.
+
+envVarGroups:
+  - name: postal-shared
+    envVars:
+      # Hostname of the web UI, e.g. postal.example.com or postal-web.onrender.com
+      - key: POSTAL_WEB_HOSTNAME
+        sync: false
+      - key: POSTAL_WEB_PROTOCOL
+        value: https
+      # Hostname used in SMTP banners / DNS instructions, e.g. postal.example.com
+      - key: POSTAL_SMTP_HOSTNAME
+        sync: false
+      # base64 of an RSA private key: `openssl genrsa 2048 | base64 -w0`
+      - key: POSTAL_SIGNING_KEY_BASE64
+        sync: false
+      - key: RAILS_SECRET_KEY
+        generateValue: true
+      - key: MAIN_DB_USERNAME
+        value: root
+      - key: MESSAGE_DB_USERNAME
+        value: root
+      - key: MIGRATION_WAITER_ENABLED
+        value: "true"
+      - key: LOGGING_ENABLED
+        value: "true"
+      # Render terminates TLS in front of the web service.
+      - key: POSTAL_TRUSTED_PROXIES
+        value: 10.0.0.0/8
+
+services:
+  # MariaDB for Postal's main and per-mail-server databases.
+  - type: pserv
+    name: postal-mariadb
+    runtime: image
+    image:
+      url: docker.io/library/mariadb:11.4
+    plan: starter
+    region: oregon
+    disk:
+      name: mariadb-data
+      mountPath: /var/lib/mysql
+      sizeGB: 10
+    envVars:
+      - key: MARIADB_ROOT_PASSWORD
+        generateValue: true
+      - key: MARIADB_DATABASE
+        value: postal
+
+  # Web UI + HTTP API (public, https://<POSTAL_WEB_HOSTNAME>).
+  - type: web
+    name: postal-web
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: /opt/postal/app/docker/render-entrypoint.sh postal web-server
+    preDeployCommand: /opt/postal/app/docker/render-entrypoint.sh postal initialize
+    plan: starter
+    region: oregon
+    healthCheckPath: /login
+    envVars:
+      - fromGroup: postal-shared
+      - key: BIND_ADDRESS
+        value: 0.0.0.0
+      - key: MAIN_DB_HOST
+        fromService: { type: pserv, name: postal-mariadb, property: host }
+      - key: MESSAGE_DB_HOST
+        fromService: { type: pserv, name: postal-mariadb, property: host }
+      - key: MAIN_DB_PASSWORD
+        fromService: { type: pserv, name: postal-mariadb, envVarKey: MARIADB_ROOT_PASSWORD }
+      - key: MESSAGE_DB_PASSWORD
+        fromService: { type: pserv, name: postal-mariadb, envVarKey: MARIADB_ROOT_PASSWORD }
+
+  # SMTP server (private network only: postal-smtp:25).
+  - type: pserv
+    name: postal-smtp
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: /opt/postal/app/docker/render-entrypoint.sh postal smtp-server
+    plan: starter
+    region: oregon
+    envVars:
+      - fromGroup: postal-shared
+      - key: PORT
+        value: "25"
+      - key: BIND_ADDRESS
+        value: 0.0.0.0
+      - key: MAIN_DB_HOST
+        fromService: { type: pserv, name: postal-mariadb, property: host }
+      - key: MESSAGE_DB_HOST
+        fromService: { type: pserv, name: postal-mariadb, property: host }
+      - key: MAIN_DB_PASSWORD
+        fromService: { type: pserv, name: postal-mariadb, envVarKey: MARIADB_ROOT_PASSWORD }
+      - key: MESSAGE_DB_PASSWORD
+        fromService: { type: pserv, name: postal-mariadb, envVarKey: MARIADB_ROOT_PASSWORD }
+
+  # Background worker: queues, outbound delivery, webhooks.
+  - type: worker
+    name: postal-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: /opt/postal/app/docker/render-entrypoint.sh postal worker
+    plan: starter
+    region: oregon
+    envVars:
+      - fromGroup: postal-shared
+      - key: MAIN_DB_HOST
+        fromService: { type: pserv, name: postal-mariadb, property: host }
+      - key: MESSAGE_DB_HOST
+        fromService: { type: pserv, name: postal-mariadb, property: host }
+      - key: MAIN_DB_PASSWORD
+        fromService: { type: pserv, name: postal-mariadb, envVarKey: MARIADB_ROOT_PASSWORD }
+      - key: MESSAGE_DB_PASSWORD
+        fromService: { type: pserv, name: postal-mariadb, envVarKey: MARIADB_ROOT_PASSWORD }
+      # Uncomment to deliver outbound mail through a relay instead of direct to MX:
+      # - key: POSTAL_SMTP_RELAYS
+      #   value: smtp://smtp.your-relay.com:587
