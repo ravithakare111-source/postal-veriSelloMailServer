@@ -67,6 +67,10 @@ services:
       - fromGroup: postal-shared
       - key: BIND_ADDRESS
         value: 0.0.0.0
+      # Render defaults WEB_CONCURRENCY to 1, which puts Puma in cluster mode;
+      # its forked worker then fails with a json default-gem version conflict.
+      - key: WEB_CONCURRENCY
+        value: "0"
       - key: MAIN_DB_HOST
         fromService: { type: pserv, name: postal-mariadb, property: host }
       - key: MESSAGE_DB_HOST
