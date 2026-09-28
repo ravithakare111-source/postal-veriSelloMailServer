@@ -6,7 +6,7 @@
 | --------------- | ------------------ | --------------------------------------------------- |
 | `postal-mariadb`| Private service + 10 GB disk | MariaDB 11.4 for all Postal data          |
 | `postal-web`    | Web service        | Web UI and HTTP API (public HTTPS)                  |
-| `postal-smtp`   | Private service    | SMTP server on port 25 (Render private network only)|
+| `postal-smtp`   | Private service    | SMTP server on port 2525 (Render private network only)|
 | `postal-worker` | Background worker  | Queue processing and outbound delivery              |
 
 All four need paid instances (private services, disks and pre-deploy commands
@@ -16,7 +16,7 @@ are not available on the free plan).
 
 - **No public SMTP port.** Render only routes public HTTP(S) traffic. The SMTP
   server is reachable only from other Render services in the same workspace
-  and region, at `postal-smtp:25`. Applications hosted elsewhere must use the
+  and region, at `postal-smtp:2525`. Applications hosted elsewhere must use the
   HTTP API (`https://<POSTAL_WEB_HOSTNAME>/api/v1/send/message`).
 - **Inbound mail (MX) cannot be received**, for the same reason.
 - **Outbound port 25** may be blocked or have poor reputation from Render's
@@ -56,7 +56,7 @@ For an application running on Render in the same region:
 
 ```
 SMTP_HOST=postal-smtp
-SMTP_PORT=25
+SMTP_PORT=2525
 SMTP_USERNAME=<any value, e.g. your-org/your-server>
 SMTP_PASSWORD=<SMTP credential key from Postal>
 SMTP_AUTH=login          # plain also works
@@ -69,7 +69,7 @@ Examples:
 ```js
 // Node.js (nodemailer)
 nodemailer.createTransport({
-  host: "postal-smtp", port: 25, secure: false, ignoreTLS: true,
+  host: "postal-smtp", port: 2525, secure: false, ignoreTLS: true,
   auth: { user: "postal", pass: process.env.POSTAL_SMTP_KEY },
 });
 ```
@@ -77,7 +77,7 @@ nodemailer.createTransport({
 ```ruby
 # Rails
 config.action_mailer.smtp_settings = {
-  address: "postal-smtp", port: 25, authentication: :login,
+  address: "postal-smtp", port: 2525, authentication: :login,
   user_name: "postal", password: ENV["POSTAL_SMTP_KEY"],
   enable_starttls_auto: false,
 }
@@ -86,7 +86,7 @@ config.action_mailer.smtp_settings = {
 ```python
 # Django
 EMAIL_HOST = "postal-smtp"
-EMAIL_PORT = 25
+EMAIL_PORT = 2525
 EMAIL_HOST_USER = "postal"
 EMAIL_HOST_PASSWORD = os.environ["POSTAL_SMTP_KEY"]
 EMAIL_USE_TLS = False
