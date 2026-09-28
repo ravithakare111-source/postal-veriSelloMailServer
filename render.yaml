@@ -62,7 +62,9 @@ services:
     preDeployCommand: /opt/postal/app/docker/render-entrypoint.sh postal initialize
     plan: starter
     region: frankfurt
-    healthCheckPath: /login
+    # No healthCheckPath: Rails host authorization only accepts
+    # POSTAL_WEB_HOSTNAME, so Render's health checker (which calls the
+    # instance by IP) always gets a 403. Render falls back to a port check.
     envVars:
       - fromGroup: postal-shared
       - key: BIND_ADDRESS
