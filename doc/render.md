@@ -16,7 +16,7 @@ are not available on the free plan).
 
 - **No public SMTP port.** Render only routes public HTTP(S) traffic. The SMTP
   server is reachable only from other Render services in the same workspace
-  and region, at `postal-smtp:2525`. Applications hosted elsewhere must use the
+  and region, at `postal-smtp:2525` (Render may add a suffix such as `postal-smtp-xsiv`; use the service's internal hostname shown in the dashboard). Applications hosted elsewhere must use the
   HTTP API (`https://<POSTAL_WEB_HOSTNAME>/api/v1/send/message`).
 - **Inbound mail (MX) cannot be received**, for the same reason.
 - **Outbound port 25** may be blocked or have poor reputation from Render's
