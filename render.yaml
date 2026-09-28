@@ -57,7 +57,7 @@ services:
   - type: web
     name: postal-web
     runtime: docker
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./Dockerfile.render
     dockerCommand: /opt/postal/app/docker/render-entrypoint.sh postal web-server
     preDeployCommand: /opt/postal/app/docker/render-entrypoint.sh postal initialize
     plan: starter
@@ -76,18 +76,18 @@ services:
       - key: MESSAGE_DB_PASSWORD
         fromService: { type: pserv, name: postal-mariadb, envVarKey: MARIADB_ROOT_PASSWORD }
 
-  # SMTP server (private network only: postal-smtp:25).
+  # SMTP server (private network only: postal-smtp:2525).
   - type: pserv
     name: postal-smtp
     runtime: docker
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./Dockerfile.render
     dockerCommand: /opt/postal/app/docker/render-entrypoint.sh postal smtp-server
     plan: starter
     region: oregon
     envVars:
       - fromGroup: postal-shared
       - key: PORT
-        value: "25"
+        value: "2525"
       - key: BIND_ADDRESS
         value: 0.0.0.0
       - key: MAIN_DB_HOST
@@ -103,7 +103,7 @@ services:
   - type: worker
     name: postal-worker
     runtime: docker
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./Dockerfile.render
     dockerCommand: /opt/postal/app/docker/render-entrypoint.sh postal worker
     plan: starter
     region: oregon
