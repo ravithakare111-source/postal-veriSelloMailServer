@@ -30,6 +30,21 @@ envVarGroups:
         value: "true"
       - key: LOGGING_ENABLED
         value: "true"
+      # DNS names Postal shows on each domain's "DNS Setup" page. Without
+      # these Postal falls back to *.postal.example.com placeholders.
+      # These hostnames must exist in the verisello.es DNS zone.
+      - key: DNS_SPF_INCLUDE
+        value: spf.postal.verisello.es
+      - key: DNS_RETURN_PATH_DOMAIN
+        value: rp.postal.verisello.es
+      - key: DNS_ROUTE_DOMAIN
+        value: routes.postal.verisello.es
+      - key: DNS_TRACK_DOMAIN
+        value: track.postal.verisello.es
+      # Comma-separated. Render cannot receive inbound mail, so these are
+      # informational only.
+      - key: DNS_MX_RECORDS
+        value: mx.postal.verisello.es
       # Render terminates TLS in front of the web service.
       - key: POSTAL_TRUSTED_PROXIES
         value: 10.0.0.0/8
